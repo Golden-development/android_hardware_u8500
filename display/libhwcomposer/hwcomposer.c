@@ -7,7 +7,7 @@
 #define HWC_REMOVE_DEPRECATED_VERSIONS 1
 
 #include <hardware/hardware.h>
-#include "hwcomposer.h"
+#include <hardware/hwcomposer.h>
 #include <hardware/hwcomposer_defs.h>
 #include <cutils/log.h>
 #include <stdbool.h>
@@ -49,6 +49,17 @@
 /* Max number of layers that can be cached. */
 #define CACHED_LAYERS_SIZE 16
 
+/*
+ * names for setParameter()
+ */
+enum {
+    /* Specifies the UI orientation */
+    HWC_UI_ORIENTATION = 0x00000000,
+    /* Specifies if hardware rotation is used */
+    HWC_HARDWARE_ROTATION = 0x00000001,
+    /* Set the hdmi plug status */
+    HWC_HDMI_PLUGGED = 0x00000002,
+};
 
 typedef struct hwc_hdmi_setting {
     bool                 hdmi_plugged;
@@ -59,7 +70,7 @@ typedef struct hwc_hdmi_setting {
 
 static int hwcomposer_device_open(const struct hw_module_t *module,
         const char *name, struct hw_device_t **device);
-static int hwcomposer_setparameter(struct hwc_composer_device *dev,
+static int hwcomposer_setparameter(struct hwc_composer_device_1 *dev,
                 int param, int value);
 static int hwcomposer_eventControl(struct hwc_composer_device_1* dev, int event, int dpy, int enabled);
 
@@ -68,20 +79,10 @@ static struct hw_module_methods_t hwcomposer_module_methods = {
 };
 
 
-static int hwc_blank(struct hwc_composer_device_1 *dev,
+static int hwcomposer_blank(struct hwc_composer_device_1 *dev,
         int disp, int blank)
 {
-    struct hwc_context_t* ctx = (struct hwc_context_t*)dev;
-    if (blank) {
-        // release our resources, the screen is turning off
-        // in our case, there is nothing to do.
-        ctx->num_of_fb_layer_prev = 0;
         return 0;
-    }
-    else {
-        // No need to unblank, will unblank on set()
-        return 0;
-    }
 }
 
 struct hwc_module HAL_MODULE_INFO_SYM = {

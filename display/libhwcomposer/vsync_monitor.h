@@ -9,7 +9,7 @@
 #ifndef VSYNC_MONITOR_H
 #define VSYNC_MONITOR_H (1)
 
-#include "hwcomposer.h"
+#include <hardware/hwcomposer.h>
 
 int vsync_monitor_init(int compdev_fd);
 

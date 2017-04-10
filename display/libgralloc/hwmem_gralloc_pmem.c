@@ -35,11 +35,7 @@
 #include "gralloc_stericsson_ext.h"
 
 #include "hwmem_gralloc.h"
-
-#if HAVE_ANDROID_OS
 #include <linux/android_pmem.h>
-#endif
-
 
 // we need this for now because pmem cannot mmap at an offset
 #define PMEM_HACK   1

@@ -24,7 +24,7 @@
 
 
 // for access to PMEM driver ioctls and structures
-#include "android_pmem.h"
+#include <linux/android_pmem.h>
 #include <linux/fb.h>
 
 #include <cutils/log.h>
@@ -42,7 +42,7 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 
-#include "../../include/hardware/copybit.h"
+#include <hardware/copybit.h>
 #include <blt_api.h>
 
 #include <hardware/hardware.h>
