@@ -38,27 +38,33 @@
 #include <hardware/power.h>
 #include <liblights/samsung_lights_helper.h>
 
-#include "samsung_power.h"
+#define CPU0_SYSFS_PATH "/sys/devices/system/cpu/cpu0"
+#define CPU0_INTERACTIVE_PATH "/sys/devices/system/cpu/cpufreq/interactive"
 
 #define BOOST_PATH             CPU0_INTERACTIVE_PATH "/boost"
 #define BOOSTPULSE_PATH        CPU0_INTERACTIVE_PATH "/boostpulse"
 #define IO_IS_BUSY_PATH        CPU0_INTERACTIVE_PATH "/io_is_busy"
 #define CPU0_HISPEED_FREQ_PATH CPU0_INTERACTIVE_PATH "/hispeed_freq"
-#define CPU4_HISPEED_FREQ_PATH CPU4_INTERACTIVE_PATH "/hispeed_freq"
 
 #define CPU0_MAX_FREQ_PATH     CPU0_SYSFS_PATH "/cpufreq/scaling_max_freq"
-#define CPU4_MAX_FREQ_PATH     CPU4_SYSFS_PATH "/cpufreq/scaling_max_freq"
+
+#define GOVERNOR_PATH "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+
+#define GOV_POWERSAVE        "conservative"
+#define GOV_BALANCED         "interactive"
+#define GOV_HIGH_PERFORMANCE "performance"
 
 #define ARRAY_SIZE(a) sizeof(a) / sizeof(a[0])
+
+static char governor[20];
+static char governorBackup[20];
+static bool isOnPerformance = 0;
 
 struct samsung_power_module {
     struct power_module base;
     pthread_mutex_t lock;
     int boostpulse_fd;
-    char cpu0_hispeed_freq[10];
     char cpu0_max_freq[10];
-    char cpu4_hispeed_freq[10];
-    char cpu4_max_freq[10];
     char* touchscreen_power_path;
     char* touchkey_power_path;
 };
@@ -66,8 +72,7 @@ struct samsung_power_module {
 enum power_profile_e {
     PROFILE_POWER_SAVE = 0,
     PROFILE_BALANCED,
-    PROFILE_HIGH_PERFORMANCE,
-    PROFILE_MAX
+    PROFILE_HIGH_PERFORMANCE
 };
 
 static enum power_profile_e current_power_profile = PROFILE_BALANCED;
@@ -75,6 +80,12 @@ static enum power_profile_e current_power_profile = PROFILE_BALANCED;
 /**********************************************************
  *** HELPER FUNCTIONS
  **********************************************************/
+
+static bool changeGov()
+{
+    // For future use
+    return false;
+}
 
 static int sysfs_read(char *path, char *s, int num_bytes)
 {
@@ -192,35 +203,41 @@ static void set_power_profile(struct samsung_power_module *samsung_pwr,
 
     switch (profile) {
         case PROFILE_POWER_SAVE:
-            // Grab value set by init.*.rc
-            sysfs_read(CPU0_HISPEED_FREQ_PATH, samsung_pwr->cpu0_hispeed_freq,
-                       sizeof(samsung_pwr->cpu0_hispeed_freq));
-            // Limit to hispeed freq
-            sysfs_write(CPU0_MAX_FREQ_PATH, samsung_pwr->cpu0_hispeed_freq);
-            rc = stat(CPU4_MAX_FREQ_PATH, &sb);
-            if (rc == 0) {
-                sysfs_read(CPU4_HISPEED_FREQ_PATH, samsung_pwr->cpu4_hispeed_freq,
-                           sizeof(samsung_pwr->cpu4_hispeed_freq));
-                sysfs_write(CPU4_MAX_FREQ_PATH, samsung_pwr->cpu4_hispeed_freq);
+            // Restore old governor if coming from performance
+            if (isOnPerformance)
+            {
+                sysfs_write(GOVERNOR_PATH, governorBackup);
+                isOnPerformance = false;
             }
+            // Limit to 800Mhz
+            sysfs_write(CPU0_MAX_FREQ_PATH, 800000);
+            if (changeGov) sysfs_write(GOVERNOR_PATH, GOV_POWERSAVE);
             ALOGV("%s: set powersave mode", __func__);
             break;
         case PROFILE_BALANCED:
+            // Restore old governor if coming from performance
+            if (isOnPerformance)
+            {
+                sysfs_write(GOVERNOR_PATH, governorBackup);
+                isOnPerformance = false;
+            }
             // Restore normal max freq
             sysfs_write(CPU0_MAX_FREQ_PATH, samsung_pwr->cpu0_max_freq);
-            rc = stat(CPU4_MAX_FREQ_PATH, &sb);
-            if (rc == 0) {
-                sysfs_write(CPU4_MAX_FREQ_PATH, samsung_pwr->cpu4_max_freq);
-            }
+            if (changeGov) sysfs_write(GOVERNOR_PATH, GOV_BALANCED);
+
             ALOGV("%s: set balanced mode", __func__);
             break;
         case PROFILE_HIGH_PERFORMANCE:
+            // Backup old governor
+            get_scaling_governor();
+            governor = governorBackup;
+            isOnPerformance = true;
+
             // Restore normal max freq
             sysfs_write(CPU0_MAX_FREQ_PATH, samsung_pwr->cpu0_max_freq);
-            rc = stat(CPU4_MAX_FREQ_PATH, &sb);
-            if (rc == 0) {
-                sysfs_write(CPU4_MAX_FREQ_PATH, samsung_pwr->cpu4_max_freq);
-            }
+
+            // CHange governor
+            sysfs_write(GOVERNOR_PATH, GOV_HIGH_PERFORMANCE);
             ALOGV("%s: set performance mode", __func__);
             break;
         default:
@@ -308,22 +325,9 @@ static void init_cpufreqs(struct samsung_power_module *samsung_pwr)
     int rc;
     struct stat sb;
 
-    sysfs_read(CPU0_HISPEED_FREQ_PATH, samsung_pwr->cpu0_hispeed_freq,
-               sizeof(samsung_pwr->cpu0_hispeed_freq));
     sysfs_read(CPU0_MAX_FREQ_PATH, samsung_pwr->cpu0_max_freq,
                sizeof(samsung_pwr->cpu0_max_freq));
-    ALOGV("%s: CPU 0 hispeed freq: %s", __func__, samsung_pwr->cpu0_hispeed_freq);
     ALOGV("%s: CPU 0 max freq: %s", __func__, samsung_pwr->cpu0_max_freq);
-
-    rc = stat(CPU4_HISPEED_FREQ_PATH, &sb);
-    if (rc == 0) {
-        sysfs_read(CPU4_HISPEED_FREQ_PATH, samsung_pwr->cpu4_hispeed_freq,
-                   sizeof(samsung_pwr->cpu4_hispeed_freq));
-        sysfs_read(CPU4_MAX_FREQ_PATH, samsung_pwr->cpu4_max_freq,
-                   sizeof(samsung_pwr->cpu4_max_freq));
-        ALOGV("%s: CPU 4 hispeed freq: %s", __func__, samsung_pwr->cpu4_hispeed_freq);
-        ALOGV("%s: CPU 4 max freq: %s", __func__, samsung_pwr->cpu4_max_freq);
-    }
 }
 
 static void init_touch_input_power_path(struct samsung_power_module *samsung_pwr)
@@ -337,6 +341,23 @@ static void init_touch_input_power_path(struct samsung_power_module *samsung_pwr
     }
 }
 
+static int get_scaling_governor() {
+    if (sysfs_read(SCALING_GOVERNOR_PATH, governor,
+                sizeof(governor)) == -1) {
+        return -1;
+    } else {
+        // Strip newline at the end.
+        int len = strlen(governor);
+
+        len--;
+
+        while (len >= 0 && (governor[len] == '\n' || governor[len] == '\r'))
+            governor[len--] = '\0';
+    }
+
+    return 0;
+}
+
 static void samsung_power_init(struct power_module *module)
 {
     struct samsung_power_module *samsung_pwr = (struct samsung_power_module *) module;
@@ -344,6 +365,22 @@ static void samsung_power_init(struct power_module *module)
     init_cpufreqs(samsung_pwr);
 
     boostpulse_open(samsung_pwr);
+
+    // From old power HAL:
+    get_scaling_governor();
+    if (strncmp(governor, "ondemand", 8) == 0) {
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/up_threshold", "90");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/io_is_busy", "0");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/sampling_down_factor", "1");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/up_threshold", "60");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/sampling_rate", "20000");
+    } else if (strncmp(governor, "interactive", 11) == 0) {
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/min_sample_time", "90000");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/io_is_busy", "1");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/hispeed_freq", "1134000");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay", "30000");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/timer_rate", "30000");
+    }
 
     samsung_pwr->touchscreen_power_path = NULL;
     samsung_pwr->touchkey_power_path = NULL;
