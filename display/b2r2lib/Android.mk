@@ -15,6 +15,8 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
+LOCAL_CFLAGS := -Wno-unused-parameter
+
 LOCAL_PRELINK_MODULE := false
 
 LOCAL_SRC_FILES := src/blt_b2r2.c

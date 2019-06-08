@@ -17,6 +17,10 @@ LOCAL_PATH:= $(call my-dir)
 # hw/<COPYPIX_HARDWARE_MODULE_ID>.<ro.board.platform>.so
 include $(CLEAR_VARS)
 
+LOCAL_CFLAGS += \
+    -Wno-unused-parameter \
+    -Wno-unused-function
+
 ifeq ($(BOARD_HAVE_GENERIC_BLN),true)
     LOCAL_CFLAGS += -DGENERIC_BLN
 endif

@@ -35,7 +35,15 @@ LOCAL_C_INCLUDES := \
    $(LOCAL_PATH)/$(BASE) \
    $(LOCAL_PATH)/$(SRC)
 
-LOCAL_CFLAGS += -DRELEASE -D__RELEASE
+LOCAL_CFLAGS += \
+	-Wno-unused-parameter \
+	-Wno-unused-variable \
+	-Wno-non-literal-null-conversion \
+	-Wno-enum-conversion \
+	-Wno-sign-compare \
+	-Wno-switch \
+	-DRELEASE \
+	-D__RELEASE
 
 LOCAL_SHARED_LIBRARIES := \
    libdl \
