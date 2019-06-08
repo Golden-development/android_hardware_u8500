@@ -21,6 +21,8 @@
   
 #include <sys/types.h>
 
+#define ffs __builtin_ffs
+
 #define MASK_INLINE static inline
 
 #define MASK_MAX SND_MASK_MAX

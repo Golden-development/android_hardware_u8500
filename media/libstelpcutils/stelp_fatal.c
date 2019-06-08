@@ -9,6 +9,7 @@
 #include <linux_utils.h>
 #include <unwind.h>
 #include <pthread.h>
+#include <string.h>
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static int idx=0; // stack depth index, protected by above mutex
