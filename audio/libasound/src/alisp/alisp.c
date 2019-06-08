@@ -1711,7 +1711,7 @@ static struct alisp_object * F_princ(struct alisp_instance *instance, struct ali
 		if (alisp_compare_type(p1, ALISP_OBJ_STRING))
 		  snd_output_printf("%s%s", instance->out, p1->value.s);
 		else
-			princ_object(instance->out, p1);
+		  princ_object(instance->out, p1);
 		n = cdr(p);
 		delete_object(instance, p);
 		p = n;
