@@ -17,4 +17,13 @@
 
 LOCAL_PATH := $(call my-dir)
 
+LOCAL_CLANG_EXCEPTION_PROJECTS += \
+    hardware/u8500/audio \
+    hardware/u8500/display \
+    hardware/u8500/media \
+    hardware/u8500/nmf \
+    hardware/u8500/power \
+    hardware/u8500/power-old \
+    hardware/u8500/ril
+
 include $(call all-subdir-makefiles)
