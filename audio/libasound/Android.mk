@@ -18,7 +18,19 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/include
 
 # libasound must be compiled with -fno-short-enums, as it makes extensive
 # use of enums which are often type casted to unsigned ints.
+
+# TODO: Fix incompatible pointer type issue for sound output properly and
+# define logical operators parentheses properly.
 LOCAL_CFLAGS := \
+	-Wno-incompatible-pointer-types \
+	-Wno-unused-parameter \
+	-Wno-unused-function \
+	-Wno-unused-variable \
+	-Wno-unneeded-internal-declaration \
+	-Wno-unused-const-variable \
+	-Wno-logical-not-parentheses \
+	-Wno-enum-conversion \
+	-Wno-pointer-arith \
 	-fPIC -DPIC -D_POSIX_SOURCE \
 	-DALSA_CONFIG_DIR=\"/system/usr/share/alsa\" \
 	-DALSA_PLUGIN_DIR=\"/system/usr/lib/alsa-lib\" \
